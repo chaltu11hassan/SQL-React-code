@@ -7,12 +7,11 @@ const sequalize = require("./util/database");
 // const db = require("./util/database");
 
 const Product = require("./models/product");
-
-const Cart = require("./models/cart");
-
 const User = require("./models/user");
-
+const Cart = require("./models/cart");
 const CartItem = require("./models/cart-item");
+const Order = require("./models/order");
+const OrderItem = require("./models/order-item");
 
 const app = express();
 
@@ -54,16 +53,18 @@ app.use(errorController.get404);
 
 //* syncs models to data tables and define relationships
 Product.belongsTo(User, { constraints: true, onDelete: "CASCADE" });
-
 //one user has many products: optional
 User.hasMany(Product);
 User.hasOne(Cart);
 Cart.belongsTo(User); //optional
 Cart.belongsToMany(Product, { through: CartItem });
 Product.belongsToMany(Cart, { through: CartItem });
+Order.belongsTo(User);
+User.hasMany(Order);
+Order.belongsToMany(Product, { through: OrderItem });
 
 sequalize
-  //   .sync({ force: true }) //force drops any existing table
+  // .sync({ force: true }) //force drops any existing table
   .sync()
   .then((result) => {
     return User.findByPk(1);
