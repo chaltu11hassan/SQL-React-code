@@ -1,8 +1,6 @@
 const path = require("path");
-
 const express = require("express");
 const bodyParser = require("body-parser");
-
 const errorController = require("./controllers/error");
 
 const sequalize = require("./util/database");
@@ -10,9 +8,11 @@ const sequalize = require("./util/database");
 
 const Product = require("./models/product");
 
-const product = require("./models/product");
+const Cart = require("./models/cart");
 
 const User = require("./models/user");
+
+const CartItem = require("./models/cart-item");
 
 const app = express();
 
@@ -35,6 +35,18 @@ const { userInfo } = require("os");
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public")));
 
+//npm start doesnt run this, it only
+app.use((req, res, next) => {
+  User.findByPk(1)
+    .then((user) => {
+      req.user = user;
+      next();
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+});
+
 app.use("/admin", adminRoutes);
 app.use(shopRoutes);
 
@@ -45,9 +57,13 @@ Product.belongsTo(User, { constraints: true, onDelete: "CASCADE" });
 
 //one user has many products: optional
 User.hasMany(Product);
+User.hasOne(Cart);
+Cart.belongsTo(User); //optional
+Cart.belongsToMany(Product, { through: CartItem });
+Product.belongsToMany(Cart, { through: CartItem });
 
 sequalize
-  //.sync({ force: true }) //force drops any existing table
+  //   .sync({ force: true }) //force drops any existing table
   .sync()
   .then((result) => {
     return User.findByPk(1);
@@ -56,13 +72,22 @@ sequalize
   .catch((err) => {
     console.log(err);
   })
-  .the((user) => {
+  .then((user) => {
     if (!user) {
+      //create user
       return User.create({ name: "Chaltu", email: "test@test.com" });
     }
+    // return Promise.resolve(user);
+    return user;
+  })
+  .then((user) => {
+    // console.log(user);
+    //create user cart
+    user.createCart();
+  })
+  .then((cart) => {
+    app.listen(3000);
   })
   .catch((err) => {
     console.log(err);
   });
-
-// app.listen(3000);
